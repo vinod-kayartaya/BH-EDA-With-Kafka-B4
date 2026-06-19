@@ -1,0 +1,169 @@
+---
+# ============================================================
+# Prometheus Alerting Rules — Kafka Cluster
+# Covers: Broker health, Topic issues, Consumer Lag
+# ============================================================
+groups:
+
+  # ----------------------------------------------------------------
+  # Broker Alerts
+  # ----------------------------------------------------------------
+  - name: kafka.broker
+    rules:
+
+      - alert: KafkaNoActiveController
+        expr: sum(kafka_controller_kafkacontroller_activecontrollercount) != 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka has no active controller (or more than one)"
+          description: "Expected exactly 1 active controller. Got {{ $value }}."
+
+      - alert: KafkaOfflinePartitions
+        expr: sum(kafka_controller_kafkacontroller_offlinepartitionscount) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka has {{ $value }} offline partition(s)"
+          description: "Partitions are offline and unavailable for reads/writes."
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: sum(kafka_server_replicamanager_underreplicatedpartitions) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka has {{ $value }} under-replicated partition(s)"
+          description: "Some partitions have fewer in-sync replicas than the replication factor."
+
+      - alert: KafkaUnderMinISR
+        expr: sum(kafka_server_replicamanager_underminisr_partitioncount) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka has {{ $value }} partition(s) under min ISR"
+          description: "Partitions have fewer ISRs than the configured min.insync.replicas."
+
+      - alert: KafkaUncleanLeaderElection
+        expr: kafka_controller_stats_uncleanleaderelectionspersec > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Unclean leader election detected on {{ $labels.instance }}"
+          description: "Unclean elections may cause data loss."
+
+      - alert: KafkaISRShrinkRateHigh
+        expr: kafka_server_replicamanager_isrshrinkspersec > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High ISR shrink rate on {{ $labels.instance }}"
+          description: "ISR shrink rate is {{ $value }}. Replicas may be falling behind."
+
+      - alert: KafkaRequestHandlerIdleLow
+        expr: kafka_server_request_handler_avg_idle_percent < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Request handler threads are overloaded on {{ $labels.instance }}"
+          description: "Idle percent is {{ $value | humanizePercentage }}. Broker is under heavy load."
+
+      - alert: KafkaNetworkProcessorIdleLow
+        expr: kafka_network_socketserver_networkprocessoravgidlepercent < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network processor threads are overloaded on {{ $labels.instance }}"
+          description: "Idle percent is {{ $value | humanizePercentage }}."
+
+      - alert: KafkaJVMHeapHighUsage
+        expr: jvm_memory_heap_used_bytes / jvm_memory_heap_max_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage high on {{ $labels.instance }}"
+          description: "Heap usage is {{ $value | humanizePercentage }}."
+
+  # ----------------------------------------------------------------
+  # Topic Alerts
+  # ----------------------------------------------------------------
+  - name: kafka.topic
+    rules:
+
+      - alert: KafkaTopicHighBytesRejected
+        expr: sum by (topic) (kafka_server_brokertopicmetrics_bytesrejectedpersec) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bytes rejected on topic {{ $labels.topic }}"
+          description: "Producers are sending data that is being rejected. Check authentication or message size limits."
+
+      - alert: KafkaTopicHighFailedProduceRequests
+        expr: sum by (topic) (kafka_server_brokertopicmetrics_failedproducerequestspersec) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High failed produce requests on topic {{ $labels.topic }}"
+          description: "Failed produce rate is {{ $value }} req/s."
+
+      - alert: KafkaTopicHighFailedFetchRequests
+        expr: sum by (topic) (kafka_server_brokertopicmetrics_failedfetchrequestspersec) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High failed fetch requests on topic {{ $labels.topic }}"
+          description: "Failed fetch rate is {{ $value }} req/s."
+
+  # ----------------------------------------------------------------
+  # Consumer Lag Alerts
+  # ----------------------------------------------------------------
+  - name: kafka.consumer_lag
+    rules:
+
+      - alert: KafkaConsumerLagHigh
+        expr: sum by (consumergroup, topic) (kafka_consumergroup_lag{topic!~"__.*"}) > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer group {{ $labels.consumergroup }} is lagging on {{ $labels.topic }}"
+          description: "Total lag is {{ $value }} messages. Consumer may be stuck or slow."
+
+      - alert: KafkaConsumerLagCritical
+        expr: sum by (consumergroup, topic) (kafka_consumergroup_lag{topic!~"__.*"}) > 100000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical consumer lag for group {{ $labels.consumergroup }} on {{ $labels.topic }}"
+          description: "Total lag is {{ $value }} messages. Immediate attention required."
+
+      - alert: KafkaConsumerGroupLagGrowing
+        expr: deriv(sum by (consumergroup, topic) (kafka_consumergroup_lag{topic!~"__.*"})[10m:1m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Lag is growing for group {{ $labels.consumergroup }} on {{ $labels.topic }}"
+          description: "Lag is increasing at {{ $value }} messages/s. Consumer is falling further behind."
+
+      - alert: KafkaConsumerGroupNotConsuming
+        expr: rate(kafka_consumergroup_current_offset{topic!~"__.*"}[5m]) == 0
+          and kafka_consumergroup_lag{topic!~"__.*"} > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consumer group {{ $labels.consumergroup }} has stopped consuming from {{ $labels.topic }}"
+          description: "Offset is not advancing but lag exists. Consumer may be dead or stalled."

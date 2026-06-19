@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "CustomerPurchase",
+  "namespace": "co.vinod.loyalty.avro.v2",
+
+  "fields": [
+    {
+      "name": "customerId",
+      "type": "string"
+    },
+    {
+      "name": "purchaseAmount",
+      "type": "double"
+    },
+    {
+      "name": "pointsEarned",
+      "type": "int"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package co.vinod.protobuf;
+
+option java_multiple_files = true;
+option java_package = "co.vinod.protobuf.model";
+option java_outer_classname = "CustomerProto";
+
+message Customer {
+
+  string customerId = 1;
+  string name = 2;
+  string email = 3;
+  double creditLimit = 4;
+}

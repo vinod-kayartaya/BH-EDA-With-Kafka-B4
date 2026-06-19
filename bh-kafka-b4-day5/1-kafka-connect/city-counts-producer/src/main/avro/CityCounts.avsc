@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "CityCounts",
+  "namespace": "com.example.producer",
+  "doc": "Represents an aggregated count for a city, keyed by city name.",
+  "fields": [
+    {
+      "name": "city",
+      "type": "string",
+      "doc": "City name — used as the primary key in the city_counts table."
+    },
+    {
+      "name": "total_count",
+      "type": "int",
+      "doc": "Aggregated count for this city."
+    }
+  ]
+}

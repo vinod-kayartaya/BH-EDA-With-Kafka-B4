@@ -1,0 +1,106 @@
+{
+  "title": "Kafka - Topic Metrics",
+  "uid": "kafka-topic",
+  "tags": ["kafka", "topic"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "topic",
+        "label": "Topic",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(kafka_server_brokertopicmetrics_messagesinpersec{topic!~'__.*'}, topic)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2
+      },
+      {
+        "name": "partition",
+        "label": "Partition",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(kafka_log_size_bytes{topic=~'$topic'}, partition)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "Messages In Per Sec (per topic)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_messagesinpersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "Bytes In Per Sec (per topic)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_bytesinpersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "Bytes Out Per Sec (per topic)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_bytesoutpersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "Failed Produce Requests Per Sec",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_failedproducerequestspersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Failed Fetch Requests Per Sec",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_failedfetchrequestspersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Total Produce vs Fetch Requests Per Sec",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (topic) (kafka_server_brokertopicmetrics_totalproducerequestspersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "Produce - {{topic}}" },
+        { "expr": "sum by (topic) (kafka_server_brokertopicmetrics_totalfetchrequestspersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "Fetch - {{topic}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Log Size Per Partition (bytes)",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_log_size_bytes{topic=~'$topic', partition=~'$partition', topic!~'__.*'}", "legendFormat": "{{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Log End Offset Per Partition",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_log_end_offset{topic=~'$topic', partition=~'$partition', topic!~'__.*'}", "legendFormat": "{{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Log Offset Delta (End - Start)",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_log_end_offset{topic=~'$topic', partition=~'$partition', topic!~'__.*'} - kafka_log_start_offset{topic=~'$topic', partition=~'$partition', topic!~'__.*'}", "legendFormat": "{{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Number of Log Segments Per Partition",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_log_num_log_segments{topic=~'$topic', partition=~'$partition', topic!~'__.*'}", "legendFormat": "{{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 20, "type": "timeseries", "title": "Bytes Rejected Per Sec (per topic)",
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 8 },
+      "targets": [{ "expr": "sum by (topic) (kafka_server_brokertopicmetrics_bytesrejectedpersec{topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "Bps", "custom": { "lineWidth": 2 } } }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+POST /connectors
+Host: localhost:8083
+Content-Type: application/json
+
+{
+  "name": "city-count-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "tasks.max": "1",
+    "topics": "city-counts",
+    "connection.url": "jdbc:postgresql://postgres:5432/kafkadb",
+    "connection.user": "postgres",
+    "connection.password": "postgres",
+    "auto.create": "false",
+    "auto.evolve": "false",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "city",
+    "table.name.format": "city_counts",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schemas.enable": "true",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}

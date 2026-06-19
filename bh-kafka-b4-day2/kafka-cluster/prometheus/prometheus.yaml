@@ -1,0 +1,89 @@
+---
+# ============================================================
+# Prometheus Configuration
+# Scrapes: Kafka JMX (x3 brokers) + Kafka Exporter (consumer lag)
+# ============================================================
+global:
+  scrape_interval: 15s         # How often Prometheus scrapes targets
+  evaluation_interval: 15s     # How often rules are evaluated
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # Uncomment and set if you have an Alertmanager:
+          # targets: ['alertmanager:9093']
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+scrape_configs:
+
+  # ------------------------------------------------------------
+  # Prometheus self-monitoring
+  # ------------------------------------------------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ------------------------------------------------------------
+  # Kafka Broker 1 — JMX Exporter
+  # ------------------------------------------------------------
+  - job_name: "kafka-broker-1"
+    static_configs:
+      - targets: ["kafka1:7071"]
+        labels:
+          broker_id: "1"
+          env: "local"
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.+):.+"
+        replacement: "$1"
+
+  # ------------------------------------------------------------
+  # Kafka Broker 2 — JMX Exporter
+  # ------------------------------------------------------------
+  - job_name: "kafka-broker-2"
+    static_configs:
+      - targets: ["kafka2:7072"]
+        labels:
+          broker_id: "2"
+          env: "local"
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.+):.+"
+        replacement: "$1"
+
+  # ------------------------------------------------------------
+  # Kafka Broker 3 — JMX Exporter
+  # ------------------------------------------------------------
+  - job_name: "kafka-broker-3"
+    static_configs:
+      - targets: ["kafka3:7073"]
+        labels:
+          broker_id: "3"
+          env: "local"
+    metrics_path: /metrics
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.+):.+"
+        replacement: "$1"
+
+  # ------------------------------------------------------------
+  # Kafka Exporter — Consumer Group Lag (broker-side view)
+  # This is the primary source for consumer lag dashboards.
+  # kafka-exporter connects to the cluster and exposes lag
+  # metrics per group, topic, and partition.
+  # ------------------------------------------------------------
+  - job_name: "kafka-exporter"
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+        labels:
+          env: "local"
+    metrics_path: /metrics

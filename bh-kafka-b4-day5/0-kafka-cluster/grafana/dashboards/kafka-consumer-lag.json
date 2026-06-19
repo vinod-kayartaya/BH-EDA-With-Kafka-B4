@@ -1,0 +1,114 @@
+{
+  "title": "Kafka - Consumer Lag",
+  "uid": "kafka-consumer-lag",
+  "tags": ["kafka", "consumer", "lag"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "consumergroup",
+        "label": "Consumer Group",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(kafka_consumergroup_lag, consumergroup)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2
+      },
+      {
+        "name": "topic",
+        "label": "Topic",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(kafka_consumergroup_lag{consumergroup=~'$consumergroup'}, topic)",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "refresh": 2
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Total Consumer Lag (All Groups)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(kafka_consumergroup_lag{topic!~'__.*'})", "legendFormat": "Total Lag" }],
+      "options": { "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1000, "color": "yellow" }, { "value": 10000, "color": "red" }] } } }
+    },
+    {
+      "id": 2, "type": "stat", "title": "Max Lag Across All Partitions",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "max(kafka_consumergroup_lag{topic!~'__.*'})", "legendFormat": "Max Lag" }],
+      "options": { "colorMode": "value", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 100, "color": "yellow" }, { "value": 1000, "color": "red" }] } } }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Consumer Groups Monitored",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "count(count by (consumergroup) (kafka_consumergroup_lag))", "legendFormat": "Groups" }],
+      "options": { "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 4, "type": "stat", "title": "Topics With Active Consumers",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "count(count by (topic) (kafka_consumergroup_lag{topic!~'__.*'}))", "legendFormat": "Topics" }],
+      "options": { "colorMode": "value", "graphMode": "none" }
+    },
+
+    {
+      "id": 10, "type": "timeseries", "title": "Consumer Lag Per Group (Sum Over Partitions)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "targets": [{ "expr": "sum by (consumergroup, topic) (kafka_consumergroup_lag{consumergroup=~'$consumergroup', topic=~'$topic', topic!~'__.*'})", "legendFormat": "{{consumergroup}} / {{topic}}" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+
+    {
+      "id": 11, "type": "timeseries", "title": "Lag Per Partition",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [{ "expr": "kafka_consumergroup_lag{consumergroup=~'$consumergroup', topic=~'$topic', topic!~'__.*'}", "legendFormat": "{{consumergroup}} / {{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+
+    {
+      "id": 12, "type": "timeseries", "title": "Consumer Group Current Offset",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_consumergroup_current_offset{consumergroup=~'$consumergroup', topic=~'$topic', topic!~'__.*'}", "legendFormat": "{{consumergroup}} / {{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+    {
+      "id": 13, "type": "timeseries", "title": "Topic Log End Offset (Latest Message Offset)",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "targets": [{ "expr": "kafka_topic_partition_current_offset{topic=~'$topic', topic!~'__.*'}", "legendFormat": "{{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+
+    {
+      "id": 20, "type": "timeseries", "title": "Offset Consumption Rate (Lag Drain Speed)",
+      "description": "Positive = lag is reducing. Negative = lag is growing.",
+      "gridPos": { "x": 0, "y": 28, "w": 24, "h": 8 },
+      "targets": [{ "expr": "rate(kafka_consumergroup_current_offset{consumergroup=~'$consumergroup', topic=~'$topic', topic!~'__.*'}[5m])", "legendFormat": "{{consumergroup}} / {{topic}}[{{partition}}]" }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } }
+    },
+
+    {
+      "id": 30, "type": "table", "title": "Consumer Lag Summary Table",
+      "gridPos": { "x": 0, "y": 36, "w": 24, "h": 10 },
+      "targets": [{
+        "expr": "sum by (consumergroup, topic) (kafka_consumergroup_lag{topic!~'__.*'})",
+        "legendFormat": "{{consumergroup}} / {{topic}}",
+        "instant": true
+      }],
+      "options": { "sortBy": [{ "displayName": "Value", "desc": true }] },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [{ "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "custom.displayMode", "value": "color-background" }, { "id": "thresholds", "value": { "steps": [{ "value": 0, "color": "green" }, { "value": 1000, "color": "yellow" }, { "value": 10000, "color": "red" }] } }] }]
+      },
+      "transformations": [{ "id": "labelsToFields", "options": {} }, { "id": "merge", "options": {} }]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "payments-source",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "tasks.max": "1",
+    "connection.url": "jdbc:postgresql://postgres:5432/kafkadb",
+    "connection.user": "postgres",
+    "connection.password": "postgres",
+    "mode": "incrementing",
+    "incrementing.column.name": "id",
+    "table.whitelist": "payments",
+    "topic.prefix": "jdbc-",
+    "transforms": "renameTopic",
+    "transforms.renameTopic.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.renameTopic.regex": ".*",
+    "transforms.renameTopic.replacement": "new-payment-in-db",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false"
+  }
+}

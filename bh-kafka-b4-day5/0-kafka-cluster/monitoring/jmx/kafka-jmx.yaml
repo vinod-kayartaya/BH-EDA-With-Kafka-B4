@@ -1,0 +1,346 @@
+---
+# ============================================================
+# Kafka JMX Exporter Configuration
+# Covers: Broker, Topic, and Consumer Group / Lag metrics
+# ============================================================
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # ----------------------------------------------------------------
+  # BROKER METRICS
+  # ----------------------------------------------------------------
+
+  # Messages In Per Sec (per broker)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_messagesinpersec
+    type: GAUGE
+    labels:
+      aggregate: "true"
+
+  # Messages In Per Sec (per topic)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_messagesinpersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Bytes In Per Sec (aggregate)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesInPerSec><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_bytesinpersec
+    type: GAUGE
+    labels:
+      aggregate: "true"
+
+  # Bytes In Per Sec (per topic)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesInPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_bytesinpersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Bytes Out Per Sec (aggregate)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesOutPerSec><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_bytesoutpersec
+    type: GAUGE
+    labels:
+      aggregate: "true"
+
+  # Bytes Out Per Sec (per topic)
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesOutPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_bytesoutpersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Bytes Rejected Per Sec
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesRejectedPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_bytesrejectedpersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Failed Produce Requests
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=FailedProduceRequestsPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_failedproducerequestspersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Failed Fetch Requests
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=FailedFetchRequestsPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_failedfetchrequestspersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Total Produce Requests Per Sec
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=TotalProduceRequestsPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_totalproducerequestspersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Total Fetch Requests Per Sec
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=TotalFetchRequestsPerSec, topic=(.+)><>OneMinuteRate"
+    name: kafka_server_brokertopicmetrics_totalfetchrequestspersec
+    type: GAUGE
+    labels:
+      topic: "$1"
+
+  # Request Handler Idle Ratio
+  - pattern: "kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>OneMinuteRate"
+    name: kafka_server_request_handler_avg_idle_percent
+    type: GAUGE
+
+  # Under Replicated Partitions
+  - pattern: "kafka.server<type=ReplicaManager, name=UnderReplicatedPartitions><>Value"
+    name: kafka_server_replicamanager_underreplicatedpartitions
+    type: GAUGE
+
+  # Under Min ISR Partition Count
+  - pattern: "kafka.server<type=ReplicaManager, name=UnderMinIsrPartitionCount><>Value"
+    name: kafka_server_replicamanager_underminisr_partitioncount
+    type: GAUGE
+
+  # Offline Partitions Count
+  - pattern: "kafka.controller<type=KafkaController, name=OfflinePartitionsCount><>Value"
+    name: kafka_controller_kafkacontroller_offlinepartitionscount
+    type: GAUGE
+
+  # Active Controller Count (should be 1 across cluster)
+  - pattern: "kafka.controller<type=KafkaController, name=ActiveControllerCount><>Value"
+    name: kafka_controller_kafkacontroller_activecontrollercount
+    type: GAUGE
+
+  # Leader Election Rate
+  - pattern: "kafka.controller<type=ControllerStats, name=LeaderElectionRateAndTimeMs><>OneMinuteRate"
+    name: kafka_controller_stats_leaderelectionrate
+    type: GAUGE
+
+  # Unclean Leader Elections
+  - pattern: "kafka.controller<type=ControllerStats, name=UncleanLeaderElectionsPerSec><>OneMinuteRate"
+    name: kafka_controller_stats_uncleanleaderelectionspersec
+    type: GAUGE
+
+  # ISR Shrink Rate
+  - pattern: "kafka.server<type=ReplicaManager, name=IsrShrinksPerSec><>OneMinuteRate"
+    name: kafka_server_replicamanager_isrshrinkspersec
+    type: GAUGE
+
+  # ISR Expand Rate
+  - pattern: "kafka.server<type=ReplicaManager, name=IsrExpandsPerSec><>OneMinuteRate"
+    name: kafka_server_replicamanager_isrexpandspersec
+    type: GAUGE
+
+  # Leader Count
+  - pattern: "kafka.server<type=ReplicaManager, name=LeaderCount><>Value"
+    name: kafka_server_replicamanager_leadercount
+    type: GAUGE
+
+  # Partition Count
+  - pattern: "kafka.server<type=ReplicaManager, name=PartitionCount><>Value"
+    name: kafka_server_replicamanager_partitioncount
+    type: GAUGE
+
+  # Log Flush Rate and Time
+  - pattern: "kafka.log<type=LogFlushStats, name=LogFlushRateAndTimeMs><>OneMinuteRate"
+    name: kafka_log_logflushstats_logflushrate
+    type: GAUGE
+
+  # Network Request Metrics (produce, fetch, metadata, etc.)
+  - pattern: "kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+)><>OneMinuteRate"
+    name: kafka_network_requestmetrics_requestspersec
+    type: GAUGE
+    labels:
+      request: "$1"
+
+  - pattern: "kafka.network<type=RequestMetrics, name=TotalTimeMs, request=(.+)><>(Mean|99thPercentile)"
+    name: kafka_network_requestmetrics_totaltimems
+    type: GAUGE
+    labels:
+      request: "$1"
+      quantile: "$2"
+
+  - pattern: "kafka.network<type=RequestMetrics, name=LocalTimeMs, request=(.+)><>(Mean|99thPercentile)"
+    name: kafka_network_requestmetrics_localtimems
+    type: GAUGE
+    labels:
+      request: "$1"
+      quantile: "$2"
+
+  - pattern: "kafka.network<type=RequestMetrics, name=RemoteTimeMs, request=(.+)><>(Mean|99thPercentile)"
+    name: kafka_network_requestmetrics_remotetimems
+    type: GAUGE
+    labels:
+      request: "$1"
+      quantile: "$2"
+
+  - pattern: "kafka.network<type=RequestMetrics, name=ResponseQueueTimeMs, request=(.+)><>(Mean|99thPercentile)"
+    name: kafka_network_requestmetrics_responsequeuetimems
+    type: GAUGE
+    labels:
+      request: "$1"
+      quantile: "$2"
+
+  # Network Processor Idle Percent
+  - pattern: "kafka.network<type=SocketServer, name=NetworkProcessorAvgIdlePercent><>Value"
+    name: kafka_network_socketserver_networkprocessoravgidlepercent
+    type: GAUGE
+
+  # Purgatory (delayed operations)
+  - pattern: "kafka.server<type=DelayedOperationPurgatory, name=PurgatorySize, delayedOperation=(.+)><>Value"
+    name: kafka_server_delayedoperationpurgatory_purgatorysize
+    type: GAUGE
+    labels:
+      delayed_operation: "$1"
+
+  # JVM Heap Usage
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage>used"
+    name: jvm_memory_heap_used_bytes
+    type: GAUGE
+
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage>max"
+    name: jvm_memory_heap_max_bytes
+    type: GAUGE
+
+  # JVM GC
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionCount"
+    name: jvm_gc_collection_count
+    type: COUNTER
+    labels:
+      gc: "$1"
+
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionTime"
+    name: jvm_gc_collection_time_ms
+    type: COUNTER
+    labels:
+      gc: "$1"
+
+  # OS CPU Load
+  - pattern: "java.lang<type=OperatingSystem><>ProcessCpuLoad"
+    name: jvm_os_process_cpu_load
+    type: GAUGE
+
+  - pattern: "java.lang<type=OperatingSystem><>SystemCpuLoad"
+    name: jvm_os_system_cpu_load
+    type: GAUGE
+
+  # Open File Descriptors
+  - pattern: "java.lang<type=OperatingSystem><>OpenFileDescriptorCount"
+    name: jvm_os_open_file_descriptors
+    type: GAUGE
+
+  # ----------------------------------------------------------------
+  # TOPIC / LOG METRICS
+  # ----------------------------------------------------------------
+
+  # Log Size (per topic, partition)
+  - pattern: "kafka.log<type=Log, name=Size, topic=(.+), partition=(.+)><>Value"
+    name: kafka_log_size_bytes
+    type: GAUGE
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  # Log Start Offset (per topic, partition)
+  - pattern: "kafka.log<type=Log, name=LogStartOffset, topic=(.+), partition=(.+)><>Value"
+    name: kafka_log_start_offset
+    type: GAUGE
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  # Log End Offset (per topic, partition)
+  - pattern: "kafka.log<type=Log, name=LogEndOffset, topic=(.+), partition=(.+)><>Value"
+    name: kafka_log_end_offset
+    type: GAUGE
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  # Number of Log Segments (per topic, partition)
+  - pattern: "kafka.log<type=Log, name=NumLogSegments, topic=(.+), partition=(.+)><>Value"
+    name: kafka_log_num_log_segments
+    type: GAUGE
+    labels:
+      topic: "$1"
+      partition: "$2"
+
+  # ----------------------------------------------------------------
+  # CONSUMER GROUP / LAG METRICS
+  # ----------------------------------------------------------------
+
+  # Consumer Group Fetch Manager: records-lag-max (per group, topic, partition)
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+), topic=(.+), partition=(.+)><>records-lag"
+    name: kafka_consumer_fetch_manager_records_lag
+    type: GAUGE
+    labels:
+      client_id: "$1"
+      topic: "$2"
+      partition: "$3"
+
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+), topic=(.+), partition=(.+)><>records-lag-max"
+    name: kafka_consumer_fetch_manager_records_lag_max
+    type: GAUGE
+    labels:
+      client_id: "$1"
+      topic: "$2"
+      partition: "$3"
+
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+), topic=(.+), partition=(.+)><>records-lead"
+    name: kafka_consumer_fetch_manager_records_lead
+    type: GAUGE
+    labels:
+      client_id: "$1"
+      topic: "$2"
+      partition: "$3"
+
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+)><>fetch-rate"
+    name: kafka_consumer_fetch_manager_fetch_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+)><>bytes-consumed-rate"
+    name: kafka_consumer_fetch_manager_bytes_consumed_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  - pattern: "kafka.consumer<type=consumer-fetch-manager-metrics, client-id=(.+)><>records-consumed-rate"
+    name: kafka_consumer_fetch_manager_records_consumed_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  # Consumer coordinator metrics
+  - pattern: "kafka.consumer<type=consumer-coordinator-metrics, client-id=(.+)><>commit-rate"
+    name: kafka_consumer_coordinator_commit_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  - pattern: "kafka.consumer<type=consumer-coordinator-metrics, client-id=(.+)><>join-rate"
+    name: kafka_consumer_coordinator_join_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  - pattern: "kafka.consumer<type=consumer-coordinator-metrics, client-id=(.+)><>sync-rate"
+    name: kafka_consumer_coordinator_sync_rate
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  - pattern: "kafka.consumer<type=consumer-coordinator-metrics, client-id=(.+)><>rebalance-rate-per-hour"
+    name: kafka_consumer_coordinator_rebalance_rate_per_hour
+    type: GAUGE
+    labels:
+      client_id: "$1"
+
+  # ----------------------------------------------------------------
+  # KAFKA EXPORTER (consumer group offsets - broker-side)
+  # These are exposed by kafka-exporter sidecar, not JMX
+  # See kafka-exporter service in docker-compose
+  # ----------------------------------------------------------------

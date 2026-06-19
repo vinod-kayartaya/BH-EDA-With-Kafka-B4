@@ -1,0 +1,18 @@
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- Suppress verbose Kafka client and Avro serialiser debug output -->
+  <logger name="org.apache.kafka" level="WARN"/>
+  <logger name="io.confluent"     level="WARN"/>
+
+  <!-- Our application code at DEBUG so you can follow every send -->
+  <logger name="com.example.producer" level="DEBUG"/>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>

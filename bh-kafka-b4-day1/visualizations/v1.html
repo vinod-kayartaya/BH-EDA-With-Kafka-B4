@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kafka Streams & KRaft Consensus Engine — Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --card-bg: rgba(15, 23, 42, 0.55);
+      --card-bg-active: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-glow: rgba(56, 189, 248, 0.35);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      
+      /* Accents */
+      --cyan: #0ea5e9;
+      --green: #22c55e;
+      --orange: #f97316;
+      --purple: #a855f7;
+      --red: #ef4444;
+      --yellow: #eab308;
+      
+      /* Producer Colors */
+      --p-order: #38bdf8;
+      --p-payment: #f43f5e;
+      --p-click: #10b981;
+      --p-sensor: #fbbf24;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 30px 30px;
+      color: var(--text-primary);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* --- HEADER --- */
+    header {
+      background: rgba(10, 15, 30, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff 30%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .cluster-metrics {
+      display: flex;
+      gap: 30px;
+    }
+
+    .metric-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+      color: var(--cyan);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 8px 18px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--cyan);
+    }
+
+    .btn-primary {
+      background: var(--cyan);
+      color: #000;
+      border-color: var(--cyan);
+    }
+
+    .btn-primary:hover {
+      background: #38bdf8;
+      box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+    }
+
+    .btn-danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+    }
+
+    .select-input {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-input:focus {
+      border-color: var(--cyan);
+    }
+
+    /* --- KRAFT STATUS --- */
+    .kraft-bar {
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid var(--card-border);
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      color: var(--text-secondary);
+    }
+
+    .kraft-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      display: inline-block;
+    }
+
+    .led.offline {
+      background-color: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    .led.warn {
+      background-color: var(--yellow);
+      box-shadow: 0 0 8px var(--yellow);
+    }
+
+    /* --- MAIN LAYOUT CONTAINER --- */
+    .dashboard {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr 280px;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1800px;
+      width: 100%;
+      margin: 0 auto;
+      align-items: stretch;
+      position: relative;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header span {
+      color: var(--cyan);
+    }
+
+    .panel-body {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    /* --- PRODUCERS PANEL --- */
+    .producer-card {
+      background: rgba(30, 41, 59, 0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .producer-card.active-glow {
+      border-color: var(--border-color-active);
+      box-shadow: 0 0 10px var(--border-color-active-alpha);
+    }
+
+    .producer-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .producer-title {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .producer-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .switch-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Custom Checkbox/Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 28px;
+      height: 16px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .2s;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 10px;
+      width: 10px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(12px);
+    }
+
+    .btn-mini {
+      font-size: 9px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    /* --- CLUSTER PANEL (MIDDLE) --- */
+    .cluster-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .brokers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .broker-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .broker-card.offline {
+      border-color: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.02);
+    }
+
+    .broker-header {
+      background: rgba(30, 41, 59, 0.4);
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .broker-status-text {
+      font-size: 10px;
+      font-family: 'Fira Code', monospace;
+      color: var(--green);
+    }
+
+    .broker-card.offline .broker-status-text {
+      color: var(--red);
+    }
+
+    .broker-body {
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .broker-toggle-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--text-secondary);
+      border-bottom: 1px dashed var(--card-border);
+      padding-bottom: 8px;
+    }
+
+    /* --- COMMIT LOG / PARTITIONS --- */
+    .partitions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .partition-replica {
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .partition-replica.is-leader {
+      border-color: rgba(234, 179, 8, 0.4);
+      box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.05);
+    }
+
+    .replica-header {
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--card-border);
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .replica-header span.leader-tag {
+      color: var(--yellow);
+      font-size: 9px;
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .replica-header span.follower-tag {
+      color: var(--text-secondary);
+      font-size: 9px;
+    }
+
+    .replica-log {
+      padding: 6px;
+      height: 90px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 9px;
+      background: rgba(0,0,0,0.15);
+    }
+
+    .log-record {
+      padding: 3px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 3px solid transparent;
+      animation: appendEffect 0.25s ease-out;
+    }
+
+    @keyframes appendEffect {
+      from { transform: translateX(-10px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .replica-footer {
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.01);
+      border-top: 1px solid var(--card-border);
+      font-size: 9px;
+      font-family: 'Fira Code', monospace;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* --- CONSUMERS PANEL --- */
+    .consumer-card {
+      background: rgba(30, 41, 59, 0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .consumer-card.paused {
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .consumer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .consumer-title {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .consumer-group-tag {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--purple);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .consumer-group-tag.analytics {
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--orange);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    .consumer-offsets {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(0,0,0,0.2);
+      padding: 6px;
+      border-radius: 4px;
+    }
+
+    .offset-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+    }
+
+    .offset-row span.lag-indicator {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .offset-row span.lag-indicator.has-lag {
+      color: var(--orange);
+      animation: alertGlow 1.5s infinite alternate;
+    }
+
+    @keyframes alertGlow {
+      from { text-shadow: 0 0 2px rgba(249, 115, 22, 0); }
+      to { text-shadow: 0 0 8px rgba(249, 115, 22, 0.6); }
+    }
+
+    .consumer-speed-slider {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .slider-input {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+    }
+
+    /* --- CONSOLE & CHART FOOTER --- */
+    .dashboard-footer {
+      display: grid;
+      grid-template-columns: 1fr 450px;
+      gap: 20px;
+      padding: 0 20px 20px;
+      max-width: 1800px;
+      width: 100%;
+      margin: 0 auto;
+      height: 180px;
+    }
+
+    .console-panel {
+      background: rgba(5, 8, 16, 0.85);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .console-logs {
+      flex: 1;
+      padding: 12px;
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-entry {
+      color: var(--text-secondary);
+      line-height: 1.4;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .log-entry span.timestamp {
+      color: var(--text-muted);
+    }
+
+    .log-entry span.info {
+      color: var(--cyan);
+    }
+
+    .log-entry span.success {
+      color: var(--green);
+    }
+
+    .log-entry span.warn {
+      color: var(--yellow);
+    }
+
+    .log-entry span.error {
+      color: var(--red);
+    }
+
+    .chart-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+    }
+
+    .chart-canvas {
+      flex: 1;
+      width: 100%;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+
+    /* --- ANIMATION ENVELOPES --- */
+    #animation-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 99;
+    }
+
+    .message-packet {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      will-change: transform, opacity;
+      z-index: 100;
+    }
+
+    .message-packet::after {
+      content: '';
+      position: absolute;
+      top: -3px; left: -3px; right: -3px; bottom: -3px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0.45;
+      animation: packetPulse 0.4s infinite alternate;
+    }
+
+    @keyframes packetPulse {
+      from { transform: scale(1); opacity: 0.5; }
+      to { transform: scale(1.6); opacity: 0.1; }
+    }
+
+    /* SVG Connections overlay */
+    #connections-svg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .connection-line {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.025);
+      stroke-width: 1;
+      transition: stroke 0.3s, stroke-width 0.3s;
+    }
+
+    .connection-line.highlight {
+      stroke: var(--highlight-color);
+      stroke-width: 1.5;
+      opacity: 0.8;
+    }
+
+    /* --- MODAL --- */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--card-border-glow);
+      border-radius: 12px;
+      width: 400px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      transform: translateY(-20px);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-backdrop.show .modal {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--text-primary);
+      outline: none;
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      border-color: var(--cyan);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BACKGROUND NETWORK LINES -->
+  <svg id="connections-svg"></svg>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-title">Apache Kafka Stream Engine</div>
+      <div class="brand-subtitle">KRaft Consensus & Topology Sandbox</div>
+    </div>
+    
+    <div class="cluster-metrics">
+      <div class="metric-card">
+        <span class="metric-label">Processed</span>
+        <span class="metric-value" id="metrics-processed">0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Throughput</span>
+        <span class="metric-value" id="metrics-throughput">0 msg/s</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Cluster Lag</span>
+        <span class="metric-value" id="metrics-lag" style="color: var(--green);">0</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary); margin-right: 10px;">
+        <span>Speed:</span>
+        <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.0" oninput="changeSpeed(this.value)" style="width: 80px; -webkit-appearance: none; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; cursor: pointer;">
+        <span id="speed-display" style="font-family:'Fira Code', monospace; min-width: 35px;">1.0x</span>
+      </div>
+      <button class="btn" id="btn-play-pause" onclick="togglePlayPause()">⏸ Pause</button>
+      <button class="btn btn-danger" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </header>
+
+  <!-- KRAFT REPLICATION MONITOR -->
+  <div class="kraft-bar">
+    <div class="kraft-status-indicator">
+      <span class="led" id="kraft-led"></span>
+      <span>Control Plane: <strong id="kraft-controller-text" style="color:var(--cyan)">KRaft Active Leader (Broker 1)</strong></span>
+    </div>
+    <div style="display:flex; gap: 20px;">
+      <span>Consensus State: <strong style="color:var(--green)">LEADER_ALIVE</strong></span>
+      <span>ISR Status: <strong id="kraft-isr-text" style="color:#fff">3/3 Sync</strong></span>
+    </div>
+  </div>
+
+  <!-- DASHBOARD WORKSPACE -->
+  <div class="dashboard">
+    
+    <!-- PRODUCERS PANEL -->
+    <div class="panel">
+      <div class="panel-header">Producers <span>Source</span></div>
+      <div class="panel-body" id="producers-container">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+    <!-- KAFKA BROKERS CLUSTER -->
+    <div class="panel" style="background: none; border: none; backdrop-filter: none; box-shadow: none;">
+      <div class="panel-header" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px 12px 0 0; backdrop-filter: blur(16px);">
+        Broker Topology <span>KRaft Node Cluster</span>
+      </div>
+      <div class="panel-body" style="background: var(--card-bg); border: 1px solid var(--card-border); border-top: none; border-radius: 0 0 12px 12px; backdrop-filter: blur(16px); padding: 20px;">
+        <div class="brokers-grid" id="brokers-container">
+          <!-- Injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSUMERS PANEL -->
+    <div class="panel">
+      <div class="panel-header">Consumers <span>Sink</span></div>
+      <div class="panel-body" id="consumers-container">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- METRICS & SYSTEM LOGS FOOTER -->
+  <div class="dashboard-footer">
+    <div class="console-panel">
+      <div class="panel-header" style="border-bottom: 1px solid var(--card-border); padding: 8px 16px; font-size: 11px;">System Event Log</div>
+      <div class="console-logs" id="console-logs-container">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+    
+    <div class="chart-panel">
+      <div class="chart-header">
+        <span>Metrics Monitoring</span>
+        <span style="font-family: 'Fira Code', monospace; font-size: 9px;"><span style="color: var(--green);">● Rate</span> &nbsp; <span style="color: var(--orange);">● Total Lag</span></span>
+      </div>
+      <canvas class="chart-canvas" id="metrics-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- FLOATING ANIMATION CONTAINER -->
+  <div id="animation-overlay"></div>
+
+  <!-- SOUNDS / SYSTEM DATA -->
+  <script>
+    // --- APP STATE ---
+    let isPlaying = true;
+    let totalMessagesProcessed = 0;
+    let messageRateHistory = [];
+    let lagHistory = [];
+    let animationSpeed = 1.0; // scale factor (1 = normal, 2 = fast, 3 = hyper)
+    
+    // Topic Definition Map
+    let topics = {
+      "events": { partitions: 3, replicas: 3 }
+    };
+    let activeTopic = "events";
+
+    // Kafka Cluster State
+    const brokers = [
+      { id: 0, name: "Broker 1", nodeId: 1, online: true, isKraftLeader: true },
+      { id: 1, name: "Broker 2", nodeId: 2, online: true, isKraftLeader: false },
+      { id: 2, name: "Broker 3", nodeId: 3, online: true, isKraftLeader: false }
+    ];
+
+    // Partition Log States per Broker for active topic
+    // partitionLogs[brokerId][partitionId] = Array of { offset, value, producerColor, producerName }
+    let partitionLogs = {
+      0: { 0: [], 1: [], 2: [] },
+      1: { 0: [], 1: [], 2: [] },
+      2: { 0: [], 1: [], 2: [] }
+    };
+
+    // Partition Log End Offsets (LEO)
+    let partitionOffsets = {
+      0: { 0: 0, 1: 0, 2: 0 },
+      1: { 0: 0, 1: 0, 2: 0 },
+      2: { 0: 0, 1: 0, 2: 0 }
+    };
+
+    // High Watermarks (HW) committed on all replicas
+    let partitionHW = { 0: 0, 1: 0, 2: 0 };
+
+    // Leadership maps
+    // partitionLeaders[partitionId] = brokerId
+    let partitionLeaders = { 0: 0, 1: 1, 2: 2 };
+
+    // Producers configuration
+    const producers = [
+      { id: 0, name: "Order Service", key: "events", color: "var(--p-order)", active: true, interval: 1200 }
+    ];
+    let producerIntervals = [];
+
+    // Consumers configuration
+    const consumers = [
+      { id: 0, name: "Group Reader 0", group: "OrderGroup", color: "var(--purple)", active: true, delay: 600, assignedPartitions: [], offsets: { 0: 0, 1: 0, 2: 0 } },
+      { id: 1, name: "Group Reader 1", group: "OrderGroup", color: "var(--purple)", active: true, delay: 600, assignedPartitions: [], offsets: { 0: 0, 1: 0, 2: 0 } },
+      { id: 2, name: "Dashboard Monitor", group: "AnalyticsGroup", color: "var(--orange)", active: true, delay: 400, assignedPartitions: [0, 1, 2], offsets: { 0: 0, 1: 0, 2: 0 } }
+    ];
+    let consumerTimeouts = {};
+
+    // --- CHART SETUP ---
+    const chartCanvas = document.getElementById("metrics-chart");
+    const chartCtx = chartCanvas.getContext("2d");
+    
+    function resizeChartCanvas() {
+      chartCanvas.width = chartCanvas.parentElement.clientWidth - 24;
+      chartCanvas.height = chartCanvas.parentElement.clientHeight - 36;
+    }
+
+    // --- INIT ---
+    window.addEventListener("load", () => {
+      buildProducersUI();
+      buildBrokersUI();
+      buildConsumersUI();
+      rebalanceConsumers();
+      resizeChartCanvas();
+      
+      // Start intervals
+      producers.forEach(p => startProducerLoop(p));
+      startConsumerLoops();
+      startMetricsLoop();
+      
+      logSystem("Kafka Cluster bootstrapped successfully via KRaft metadata engine.", "success");
+      logSystem("Control plane leader elected on Broker 1 (Node 1). quorum=3/3", "info");
+      
+      window.addEventListener("resize", () => {
+        resizeChartCanvas();
+        drawBackgroundConnections();
+      });
+      
+      // Delay connection line draw to ensure elements are styled
+      setTimeout(drawBackgroundConnections, 200);
+    });
+
+    // --- UI BUILDERS ---
+
+    function buildProducersUI() {
+      const container = document.getElementById("producers-container");
+      container.innerHTML = "";
+      producers.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "producer-card";
+        card.id = `producer-card-${p.id}`;
+        card.style.setProperty('--border-color-active', p.color);
+        card.style.setProperty('--border-color-active-alpha', p.color + "33");
+        
+        card.innerHTML = `
+          <div class="producer-meta">
+            <span class="producer-title" style="color:${p.color}">${p.name}</span>
+            <span class="led" id="producer-led-${p.id}" style="background-color:${p.active ? 'var(--green)' : 'var(--text-muted)'}; box-shadow:0 0 8px ${p.active ? 'var(--green)' : 'transparent'}"></span>
+          </div>
+          <div class="producer-controls">
+            <div class="switch-container">
+              <span>Auto</span>
+              <label class="switch">
+                <input type="checkbox" id="producer-switch-${p.id}" ${p.active ? 'checked' : ''} onchange="toggleProducer(${p.id}, this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <button class="btn btn-mini" onclick="triggerManualProduce(${p.id})">Emitted Msg</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function buildBrokersUI() {
+      const container = document.getElementById("brokers-container");
+      container.innerHTML = "";
+      
+      const numPartitions = topics[activeTopic].partitions;
+      
+      brokers.forEach(b => {
+        const card = document.createElement("div");
+        card.className = `broker-card ${b.online ? '' : 'offline'}`;
+        card.id = `broker-card-${b.id}`;
+        
+        // Build partitions UI
+        let partitionsHTML = "";
+        for (let p = 0; p < numPartitions; p++) {
+          const isLeader = partitionLeaders[p] === b.id && b.online;
+          const replicaRoleText = isLeader 
+            ? `<span class="leader-tag">★ Leader</span>` 
+            : `<span class="follower-tag">Follower (ISR)</span>`;
+          
+          partitionsHTML += `
+            <div class="partition-replica ${isLeader ? 'is-leader' : ''}" id="broker-${b.id}-part-${p}">
+              <div class="replica-header">
+                <span>${activeTopic}-p${p}</span>
+                ${replicaRoleText}
+              </div>
+              <div class="replica-log" id="replica-log-b${b.id}-p${p}">
+                <!-- Message records injected here -->
+              </div>
+              <div class="replica-footer">
+                <span>LEO: <strong id="leo-b${b.id}-p${p}">0</strong></span>
+                <span>HW: <strong id="hw-b${b.id}-p${p}">0</strong></span>
+              </div>
+            </div>
+          `;
+        }
+        
+        card.innerHTML = `
+          <div class="broker-header">
+            <span>${b.name} ${b.isKraftLeader ? '<span style="color:var(--yellow); font-size:9px;">[KRaft Node]</span>' : ''}</span>
+            <span class="broker-status-text">${b.online ? 'ONLINE' : 'OFFLINE'}</span>
+          </div>
+          <div class="broker-body">
+            <div class="broker-toggle-panel">
+              <span>Power State</span>
+              <label class="switch">
+                <input type="checkbox" ${b.online ? 'checked' : ''} onchange="toggleBroker(${b.id}, this.checked)">
+                <span class="slider" style="background-color:${b.online ? 'var(--green)' : 'rgba(255,255,255,0.1)'}"></span>
+              </label>
+            </div>
+            <div class="partitions-list">
+              <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--card-border); padding-bottom: 4px; margin-bottom: 8px;">Topic: <strong style="color:var(--cyan);">${activeTopic}</strong></div>
+              ${partitionsHTML}
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+        
+        // Re-inject existing log messages into log view
+        for (let p = 0; p < numPartitions; p++) {
+          renderLogList(b.id, p);
+        }
+      });
+    }
+
+    function buildConsumersUI() {
+      const container = document.getElementById("consumers-container");
+      container.innerHTML = "";
+      
+      consumers.forEach(c => {
+        const card = document.createElement("div");
+        card.className = `consumer-card ${c.active ? '' : 'paused'}`;
+        card.id = `consumer-card-${c.id}`;
+        
+        let offsetsHTML = "";
+        c.assignedPartitions.forEach(p => {
+          const leader = partitionLeaders[p];
+          const latestOffset = leader !== -1 ? partitionHW[p] : 0;
+          const consumerOffset = c.offsets[p] || 0;
+          const lag = Math.max(0, latestOffset - consumerOffset);
+          
+          offsetsHTML += `
+            <div class="offset-row" id="offset-row-c${c.id}-p${p}">
+              <span>${activeTopic}-p${p}:</span>
+              <span>Offset: ${consumerOffset} &nbsp; 
+                <span class="lag-indicator ${lag > 0 ? 'has-lag' : ''}">Lag: ${lag}</span>
+              </span>
+            </div>
+          `;
+        });
+        
+        if (c.assignedPartitions.length === 0) {
+          offsetsHTML = `<div style="font-size:9px; color:var(--text-muted); text-align:center;">No partitions assigned (Rebalancing...)</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="consumer-header">
+            <span class="consumer-title" style="color:${c.color}">${c.name}</span>
+            <span class="consumer-group-tag ${c.group === 'AnalyticsGroup' ? 'analytics' : ''}">${c.group}</span>
+          </div>
+          <div class="consumer-offsets" id="consumer-offsets-${c.id}">
+            ${offsetsHTML}
+          </div>
+          <div class="consumer-speed-slider">
+            <div style="display:flex; justify-content:space-between;">
+              <span>Delay: ${c.delay}ms</span>
+              <span style="color:${c.active ? 'var(--green)' : 'var(--red)'}">${c.active ? 'RUNNING' : 'PAUSED'}</span>
+            </div>
+            <input type="range" class="slider-input" min="100" max="2000" step="100" value="${c.delay}" onchange="changeConsumerDelay(${c.id}, this.value)">
+          </div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-mini" onclick="toggleConsumer(${c.id})">${c.active ? 'Pause' : 'Resume'}</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // --- RE-RENDER COMMITTED SEGMENT LOGS ---
+    function renderLogList(brokerId, partitionId) {
+      const container = document.getElementById(`replica-log-b${brokerId}-p${partitionId}`);
+      if (!container) return;
+      container.innerHTML = "";
+      
+      const logs = partitionLogs[brokerId][partitionId] || [];
+      // Slice to show maximum 10 latest messages in the log scroll
+      const visibleLogs = logs.slice(-10);
+      
+      visibleLogs.forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "log-record";
+        div.style.borderLeftColor = entry.producerColor;
+        div.innerHTML = `
+          <span>#${entry.offset} [${entry.producerName.split(' ')[0]}]</span>
+          <span style="font-size:8px; color:var(--text-secondary)">${entry.value}</span>
+        `;
+        container.appendChild(div);
+      });
+      
+      // Auto-scroll to bottom of partition log
+      container.scrollTop = container.scrollHeight;
+      
+      // Update counts
+      const leoEl = document.getElementById(`leo-b${brokerId}-p${partitionId}`);
+      if (leoEl) leoEl.textContent = logs.length;
+      
+      const hwEl = document.getElementById(`hw-b${brokerId}-p${partitionId}`);
+      if (hwEl) hwEl.textContent = partitionHW[partitionId] || 0;
+    }
+
+    // --- SIMULATION RUNTIME LOOPS ---
+    function startProducerLoop(p) {
+      if (!p.active) return;
+      
+      const intervalId = setInterval(() => {
+        if (!isPlaying) return;
+        produceMessage(p);
+      }, p.interval / (animationSpeed * 0.7));
+      
+      producerIntervals[p.id] = intervalId;
+    }
+
+    function stopProducerLoop(pId) {
+      if (producerIntervals[pId]) {
+        clearInterval(producerIntervals[pId]);
+        producerIntervals[pId] = null;
+      }
+    }
+
+    function toggleProducer(id, isChecked) {
+      const p = producers[id];
+      p.active = isChecked;
+      
+      const led = document.getElementById(`producer-led-${p.id}`);
+      if (p.active) {
+        led.style.backgroundColor = "var(--green)";
+        led.style.boxShadow = "0 0 8px var(--green)";
+        startProducerLoop(p);
+        logSystem(`Producer '${p.name}' started auto-producing events.`, "info");
+      } else {
+        led.style.backgroundColor = "var(--text-muted)";
+        led.style.boxShadow = "none";
+        stopProducerLoop(p.id);
+        logSystem(`Producer '${p.name}' stopped.`, "info");
+      }
+    }
+
+    function triggerManualProduce(id) {
+      produceMessage(producers[id]);
+    }
+
+    function toggleBroker(id, isChecked) {
+      const b = brokers[id];
+      b.online = isChecked;
+      
+      logSystem(`Broker ${b.nodeId} state change requested: ONLINE -> ${b.online ? 'ONLINE' : 'OFFLINE'}`, "info");
+      
+      // Flash offline on UI immediately
+      const card = document.getElementById(`broker-card-${id}`);
+      if (b.online) {
+        card.classList.remove("offline");
+      } else {
+        card.classList.add("offline");
+      }
+      
+      // Trigger leader election and client rebalances
+      recalculatePartitionLeadership();
+      rebalanceConsumers();
+      
+      // Refresh Brokers UI to update Star markings
+      buildBrokersUI();
+      buildConsumersUI();
+      drawBackgroundConnections();
+    }
+
+    function toggleConsumer(id) {
+      const c = consumers[id];
+      c.active = !c.active;
+      
+      logSystem(`Consumer '${c.name}' state toggled to: ${c.active ? 'ACTIVE' : 'PAUSED'}`, "info");
+      
+      rebalanceConsumers();
+      buildConsumersUI();
+      drawBackgroundConnections();
+      
+      if (c.active) {
+        startConsumerLoop(c);
+      } else {
+        if (consumerTimeouts[c.id]) {
+          clearTimeout(consumerTimeouts[c.id]);
+          consumerTimeouts[c.id] = null;
+        }
+      }
+    }
+
+    function changeConsumerDelay(id, value) {
+      consumers[id].delay = parseInt(value);
+      logSystem(`Consumer '${consumers[id].name}' processing delay set to ${value}ms.`, "info");
+      buildConsumersUI();
+    }
+
+    function togglePlayPause() {
+      isPlaying = !isPlaying;
+      document.getElementById("btn-play-pause").textContent = isPlaying ? "⏸ Pause" : "▶ Play";
+      logSystem(isPlaying ? "Simulation resumed." : "Simulation paused.", "info");
+    }
+
+    // --- KRAFT LEADER ELECTION SIMULATOR ---
+    function recalculatePartitionLeadership() {
+      const numPartitions = topics[activeTopic].partitions;
+      let kraftLeaderOffline = false;
+      
+      // Preferred leadership priorities
+      // P0: 0 -> 1 -> 2
+      // P1: 1 -> 2 -> 0
+      // P2: 2 -> 0 -> 1
+      const priorities = {
+        0: [0, 1, 2],
+        1: [1, 2, 0],
+        2: [2, 0, 1]
+      };
+
+      for (let p = 0; p < numPartitions; p++) {
+        let newLeader = -1;
+        const candidates = priorities[p] || [0, 1, 2];
+        
+        // Find the first online broker hosting the partition replica
+        for (let c of candidates) {
+          // Check if this topic has replica configurations for this broker
+          if (c < topics[activeTopic].replicas && brokers[c].online) {
+            newLeader = c;
+            break;
+          }
+        }
+        
+        const oldLeader = partitionLeaders[p];
+        partitionLeaders[p] = newLeader;
+        
+        if (oldLeader !== newLeader) {
+          if (newLeader !== -1) {
+            logSystem(`KRaft metadata election: Partition ${p} leader failed over to Broker ${newLeader + 1}`, "warn");
+          } else {
+            logSystem(`[FATAL] Partition ${p} HAS NO ACTIVE REPLICAS! Topic offline.`, "error");
+          }
+        }
+      }
+
+      // Check KRaft Controller state
+      const currentKraftLeader = brokers.find(b => b.isKraftLeader);
+      if (currentKraftLeader && !currentKraftLeader.online) {
+        // Re-elect controller
+        const nextController = brokers.find(b => b.online);
+        brokers.forEach(b => b.isKraftLeader = false);
+        
+        const led = document.getElementById("kraft-led");
+        const statusText = document.getElementById("kraft-controller-text");
+        
+        if (nextController) {
+          nextController.isKraftLeader = true;
+          logSystem(`KRaft controller node went offline. Consensus group elected Broker ${nextController.nodeId} as Leader.`, "warn");
+          statusText.textContent = `KRaft Active Leader (Broker ${nextController.nodeId})`;
+          led.className = "led";
+        } else {
+          logSystem(`[CRITICAL] All KRaft quorum brokers are offline! Cluster consensus halted.`, "error");
+          statusText.textContent = `Cluster Unresponsive (No Consensus)`;
+          led.className = "led offline";
+        }
+      } else {
+        const led = document.getElementById("kraft-led");
+        const statusText = document.getElementById("kraft-controller-text");
+        const onlineCount = brokers.filter(b => b.online).length;
+        
+        if (onlineCount === 3) {
+          led.className = "led";
+          statusText.textContent = `KRaft Active Leader (Broker ${brokers.find(b => b.isKraftLeader).nodeId})`;
+        } else if (onlineCount >= 2) {
+          led.className = "led warn";
+          statusText.textContent = `KRaft Active Leader (Degraded quorum: ${onlineCount}/3)`;
+        } else {
+          led.className = "led offline";
+          statusText.textContent = `KRaft Quorum Split-Brain (No Quorum: ${onlineCount}/3)`;
+        }
+      }
+
+      // Update ISR Status bar text
+      const onlineCount = brokers.filter(b => b.online).length;
+      document.getElementById("kraft-isr-text").textContent = `${onlineCount}/3 Sync`;
+      if (onlineCount < 2) {
+        document.getElementById("kraft-isr-text").style.color = "var(--red)";
+      } else {
+        document.getElementById("kraft-isr-text").style.color = "#fff";
+      }
+    }
+
+    // --- CONSUMER REBALANCING ---
+    function rebalanceConsumers() {
+      // Find active consumers in the main group
+      const activeGroupMembers = consumers.filter(c => c.active && c.group === "OrderGroup");
+      
+      // Clear current assignments
+      consumers.forEach(c => c.assignedPartitions = []);
+      
+      const numPartitions = topics[activeTopic].partitions;
+      
+      // Assign partitions round-robin
+      if (activeGroupMembers.length > 0) {
+        for (let p = 0; p < numPartitions; p++) {
+          const cIndex = p % activeGroupMembers.length;
+          activeGroupMembers[cIndex].assignedPartitions.push(p);
+        }
+      }
+
+      // Independent consumers always read all partitions
+      const independentConsumers = consumers.filter(c => c.group === "AnalyticsGroup");
+      independentConsumers.forEach(c => {
+        if (c.active) {
+          c.assignedPartitions = Array.from({ length: numPartitions }, (_, i) => i);
+        }
+      });
+      
+      logSystem(`Rebalancing Consumer Group: assigned partitions to ${activeGroupMembers.length} active nodes.`, "info");
+    }
+
+    function startConsumerLoops() {
+      consumers.forEach(c => {
+        if (c.active) startConsumerLoop(c);
+      });
+    }
+
+    function startConsumerLoop(c) {
+      if (consumerTimeouts[c.id]) clearTimeout(consumerTimeouts[c.id]);
+      
+      const timeoutId = setTimeout(() => {
+        if (isPlaying && c.active) {
+          consumeNextMessage(c);
+        }
+        startConsumerLoop(c);
+      }, c.delay / (animationSpeed * 0.7));
+      
+      consumerTimeouts[c.id] = timeoutId;
+    }
+
+    // --- PRODUCE LOGIC ---
+    function produceMessage(p) {
+      const numPartitions = topics[activeTopic].partitions;
+      const numReplicas = topics[activeTopic].replicas;
+      
+      // Key-based partition routing or random round-robin
+      const partition = Math.floor(Math.random() * numPartitions);
+      const leaderBrokerId = partitionLeaders[partition];
+      
+      if (leaderBrokerId === -1) {
+        logSystem(`[ERROR] Publish failed: Partition ${partition} leader unavailable for topic '${activeTopic}'.`, "error");
+        
+        // Brief red warning animation on partition block
+        brokers.forEach(b => {
+          const el = document.getElementById(`broker-${b.id}-part-${partition}`);
+          if (el) {
+            el.style.backgroundColor = "rgba(239, 68, 68, 0.15)";
+            el.style.borderColor = "var(--red)";
+            setTimeout(() => {
+              el.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
+              el.style.borderColor = "var(--card-border)";
+            }, 500);
+          }
+        });
+        return;
+      }
+      
+      // Emitted payload details
+      const msgValue = `${p.key}-${Math.floor(Math.random() * 900) + 100}`;
+      const leaderBrokerObj = brokers[leaderBrokerId];
+      
+      // Compute next offset based on leader LEO
+      const offset = (partitionOffsets[leaderBrokerId][partition] || 0);
+      const messageObj = {
+        offset: offset,
+        value: msgValue,
+        producerColor: p.color,
+        producerName: p.name
+      };
+
+      // UI visual effects
+      const producerEl = document.getElementById(`producer-card-${p.id}`);
+      producerEl.style.transform = "scale(1.03)";
+      setTimeout(() => producerEl.style.transform = "scale(1)", 150);
+
+      // Trigger animation: Producer -> Broker Leader
+      const destPartitionEl = document.getElementById(`broker-${leaderBrokerId}-part-${partition}`);
+      
+      spawnParticle(producerEl, destPartitionEl, p.color, () => {
+        // Step 1: Write to Leader
+        if (!brokers[leaderBrokerId].online) {
+          logSystem(`[ERROR] Write failed: Broker ${leaderBrokerId+1} went offline during flight.`, "error");
+          return;
+        }
+
+        // Commit message to leader log memory array
+        if (!partitionLogs[leaderBrokerId][partition]) partitionLogs[leaderBrokerId][partition] = [];
+        partitionLogs[leaderBrokerId][partition].push(messageObj);
+        partitionOffsets[leaderBrokerId][partition] = partitionLogs[leaderBrokerId][partition].length;
+        
+        renderLogList(leaderBrokerId, partition);
+        logSystem(`producer-meta -> Broker ${leaderBrokerId+1} (Leader ★, Partition ${partition}): Committing offset #${offset}`, "success");
+        
+        // Step 2: Trigger replication (KRaft ISR Sync)
+        const followers = brokers.filter(b => b.id !== leaderBrokerId);
+        let syncCount = 1; // leader is already in sync
+        
+        followers.forEach(fb => {
+          // Replicate only if this broker hosts the replica (controlled by replica count)
+          if (fb.id < numReplicas) {
+            const followerEl = document.getElementById(`broker-${fb.id}-part-${partition}`);
+            
+            if (fb.online) {
+              spawnParticle(destPartitionEl, followerEl, p.color, () => {
+                if (!fb.online) return;
+                
+                // Commit replication log
+                if (!partitionLogs[fb.id][partition]) partitionLogs[fb.id][partition] = [];
+                partitionLogs[fb.id][partition].push(messageObj);
+                partitionOffsets[fb.id][partition] = partitionLogs[fb.id][partition].length;
+                
+                renderLogList(fb.id, partition);
+                syncCount++;
+                
+                // Calculate high watermark (HW) based on min offset in active replicas
+                updateHighWatermark(partition);
+              });
+            }
+          }
+        });
+        
+        // Single replica fallback or instant commit
+        if (numReplicas === 1) {
+          updateHighWatermark(partition);
+        }
+      });
+    }
+
+    function updateHighWatermark(partitionId) {
+      const numReplicas = topics[activeTopic].replicas;
+      
+      // HW is the minimum of in-sync active replica offsets
+      let replicaLEOs = [];
+      brokers.forEach(b => {
+        if (b.id < numReplicas && b.online) {
+          replicaLEOs.push(partitionOffsets[b.id][partitionId] || 0);
+        }
+      });
+      
+      const newHW = replicaLEOs.length > 0 ? Math.min(...replicaLEOs) : 0;
+      partitionHW[partitionId] = newHW;
+      
+      // Update UI displays
+      brokers.forEach(b => {
+        if (b.id < numReplicas) {
+          const hwEl = document.getElementById(`hw-b${b.id}-p${partitionId}`);
+          if (hwEl) hwEl.textContent = newHW;
+        }
+      });
+    }
+
+    // --- CONSUME LOGIC ---
+    function consumeNextMessage(c) {
+      // Find the first assigned partition with consumer lag
+      let targetPartition = -1;
+      let targetOffset = -1;
+      
+      for (let p of c.assignedPartitions) {
+        const currentReadOffset = c.offsets[p] || 0;
+        const currentHW = partitionHW[p] || 0;
+        
+        if (currentReadOffset < currentHW) {
+          targetPartition = p;
+          targetOffset = currentReadOffset;
+          break;
+        }
+      }
+      
+      if (targetPartition === -1) return; // No lag to process
+      
+      const leaderId = partitionLeaders[targetPartition];
+      if (leaderId === -1) return; // Partition offline
+      
+      // Fetch message from Leader Broker
+      const msgObj = partitionLogs[leaderId][targetPartition][targetOffset];
+      if (!msgObj) return;
+
+      const srcPartitionEl = document.getElementById(`broker-${leaderId}-part-${targetPartition}`);
+      const destConsumerEl = document.getElementById(`consumer-card-${c.id}`);
+
+      // Animate packet delivery: Broker -> Consumer
+      spawnParticle(srcPartitionEl, destConsumerEl, msgObj.producerColor, () => {
+        if (!c.active) return; // paused during travel
+        
+        // Increment read offset
+        c.offsets[targetPartition] = targetOffset + 1;
+        totalMessagesProcessed++;
+        
+        // Flash UI
+        destConsumerEl.style.transform = "scale(1.02)";
+        setTimeout(() => destConsumerEl.style.transform = "scale(1)", 150);
+        
+        // Render consumer panel
+        buildConsumersUI();
+        
+        logSystem(`Consumer '${c.name}' successfully polled message at offset #${targetOffset} from Partition ${targetPartition}`, "info");
+      });
+    }
+
+    // --- PARTICLE PHYSICS ENGINE (BEZIER CORDS) ---
+    function spawnParticle(fromEl, toEl, color, onArrive) {
+      const overlay = document.getElementById("animation-overlay");
+      const packet = document.createElement("div");
+      packet.className = "message-packet";
+      packet.style.backgroundColor = color;
+      packet.style.color = color; // for drop-shadow inherit
+      overlay.appendChild(packet);
+
+      // Get screen offsets
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = toEl.getBoundingClientRect();
+
+      const startX = fromRect.left + fromRect.width / 2;
+      const startY = fromRect.top + fromRect.height / 2;
+      const endX = toRect.left + toRect.width / 2;
+      const endY = toRect.top + toRect.height / 2;
+
+      // Draw dynamic highlight path
+      highlightLink(fromEl, toEl, color);
+
+      // Quadrant arc offsets
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2 - 35; // upward arc height
+
+      let t = 0;
+      // Duration scaled inversely by speed index
+      const baseDuration = 700; // ms
+      const duration = baseDuration / animationSpeed;
+      const startTime = performance.now();
+      let lastTrailTime = 0;
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        t = Math.min(elapsed / duration, 1);
+
+        // Bezier calculations
+        const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * midX + t * t * endX;
+        const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * midY + t * t * endY;
+
+        packet.style.transform = `translate3d(${x - 4}px, ${y - 4}px, 0)`;
+
+        // Comet smoke trail generation
+        if (now - lastTrailTime > 20) {
+          createTrailDot(x, y, color);
+          lastTrailTime = now;
+        }
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          packet.remove();
+          if (onArrive) onArrive();
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function createTrailDot(x, y, color) {
+      const overlay = document.getElementById("animation-overlay");
+      const dot = document.createElement("div");
+      dot.className = "trail-dot";
+      dot.style.position = "absolute";
+      dot.style.width = "5px";
+      dot.style.height = "5px";
+      dot.style.borderRadius = "50%";
+      dot.style.backgroundColor = color;
+      dot.style.color = color;
+      dot.style.boxShadow = `0 0 6px ${color}`;
+      dot.style.transform = `translate3d(${x - 2.5}px, ${y - 2.5}px, 0)`;
+      dot.style.opacity = "0.75";
+      dot.style.pointerEvents = "none";
+      dot.style.zIndex = "98";
+      dot.style.transition = "opacity 0.22s ease-out, transform 0.22s ease-out";
+      overlay.appendChild(dot);
+      
+      requestAnimationFrame(() => {
+        dot.style.opacity = "0";
+        dot.style.transform = `translate3d(${x - 2.5}px, ${y - 2.5}px, 0) scale(0.15)`;
+      });
+      
+      setTimeout(() => {
+        dot.remove();
+      }, 220);
+    }
+
+    // --- CONNECTION PATH HIGHLIGHTING ---
+    function highlightLink(fromEl, toEl, color) {
+      // Create a unique link ID
+      const linkId = `link-${fromEl.id}-${toEl.id}`;
+      const reverseLinkId = `link-${toEl.id}-${fromEl.id}`;
+      
+      const line = document.getElementById(linkId) || document.getElementById(reverseLinkId);
+      if (line) {
+        line.style.setProperty('--highlight-color', color);
+        line.classList.add("highlight");
+        setTimeout(() => {
+          line.classList.remove("highlight");
+        }, 600 / animationSpeed);
+      }
+    }
+
+    // --- DRAW SVG LINK LAYER ---
+    function drawBackgroundConnections() {
+      const svg = document.getElementById("connections-svg");
+      svg.innerHTML = "";
+      
+      const svgRect = svg.getBoundingClientRect();
+
+      // Clear layout caches
+      const producersList = document.querySelectorAll(".producer-card");
+      const brokersList = document.querySelectorAll(".broker-card");
+      const consumersList = document.querySelectorAll(".consumer-card");
+
+      // Draw Producers to Broker Leaders
+      producersList.forEach(p => {
+        const pRect = p.getBoundingClientRect();
+        const pX = pRect.right;
+        const pY = pRect.top + pRect.height / 2;
+
+        brokersList.forEach(b => {
+          const bRect = b.getBoundingClientRect();
+          const bX = bRect.left;
+          const bY = bRect.top + bRect.height / 2;
+
+          drawPath(svg, svgRect, `link-${p.id}-${b.id}`, pX, pY, bX, bY);
+        });
+      });
+
+      // Draw Broker Leaders to Consumers
+      brokersList.forEach(b => {
+        const bRect = b.getBoundingClientRect();
+        const bX = bRect.right;
+        const bY = bRect.top + bRect.height / 2;
+
+        consumersList.forEach(c => {
+          const cRect = c.getBoundingClientRect();
+          const cX = cRect.left;
+          const cY = cRect.top + cRect.height / 2;
+
+          drawPath(svg, svgRect, `link-${b.id}-${c.id}`, bX, bY, cX, cY);
+        });
+      });
+    }
+
+    function drawPath(svg, svgRect, id, x1, y1, x2, y2) {
+      // Map global screen coords to local SVG coords
+      const localX1 = x1 - svgRect.left;
+      const localY1 = y1 - svgRect.top;
+      const localX2 = x2 - svgRect.left;
+      const localY2 = y2 - svgRect.top;
+
+      // Draw beautiful curved quadratic path
+      const midX = (localX1 + localX2) / 2;
+      const midY = (localY1 + localY2) / 2 - 20;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", `M ${localX1} ${localY1} Q ${midX} ${midY} ${localX2} ${localY2}`);
+      path.setAttribute("id", id);
+      path.setAttribute("class", "connection-line");
+      svg.appendChild(path);
+    }
+
+    // --- SYSTEM LOGS CONSOLE ---
+    function logSystem(message, type = "info") {
+      const container = document.getElementById("console-logs-container");
+      const timestamp = new Date().toLocaleTimeString();
+      
+      const log = document.createElement("div");
+      log.className = "log-entry";
+      log.innerHTML = `
+        <span class="timestamp">[${timestamp}]</span> 
+        <span class="${type}">[${type.toUpperCase()}]</span> 
+        ${message}
+      `;
+      container.appendChild(log);
+      container.scrollTop = container.scrollHeight;
+
+      // Restrict log lines count
+      if (container.children.length > 50) {
+        container.children[0].remove();
+      }
+    }
+
+    // --- METRICS CHART RENDERING ---
+    let lastProcessedCount = 0;
+    function startMetricsLoop() {
+      setInterval(() => {
+        if (!isPlaying) return;
+
+        // Calculate throughput: processed events since last check
+        const delta = totalMessagesProcessed - lastProcessedCount;
+        lastProcessedCount = totalMessagesProcessed;
+        messageRateHistory.push(delta);
+        
+        // Calculate total lag across active partitions
+        let totalLag = 0;
+        consumers.forEach(c => {
+          c.assignedPartitions.forEach(p => {
+            const hw = partitionHW[p] || 0;
+            const committed = c.offsets[p] || 0;
+            totalLag += Math.max(0, hw - committed);
+          });
+        });
+        lagHistory.push(totalLag);
+
+        // Limit chart history length to 40 data points
+        if (messageRateHistory.length > 40) messageRateHistory.shift();
+        if (lagHistory.length > 40) lagHistory.shift();
+
+        // Update stats widgets in header
+        document.getElementById("metrics-processed").textContent = totalMessagesProcessed;
+        document.getElementById("metrics-throughput").textContent = `${delta} msg/s`;
+        document.getElementById("metrics-lag").textContent = totalLag;
+        
+        const lagText = document.getElementById("metrics-lag");
+        if (totalLag > 0) {
+          lagText.style.color = "var(--orange)";
+        } else {
+          lagText.style.color = "var(--green)";
+        }
+
+        renderMetricsChart();
+      }, 1000);
+    }
+
+    function renderMetricsChart() {
+      const w = chartCanvas.width;
+      const h = chartCanvas.height;
+      chartCtx.clearRect(0, 0, w, h);
+
+      if (messageRateHistory.length === 0) return;
+
+      // Find scaling bounds
+      const maxRate = Math.max(5, ...messageRateHistory);
+      const maxLag = Math.max(5, ...lagHistory);
+      const dataLength = messageRateHistory.length;
+      
+      // Draw grid lines
+      chartCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+      chartCtx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        const y = h * (i / 4);
+        chartCtx.beginPath();
+        chartCtx.moveTo(0, y);
+        chartCtx.lineTo(w, y);
+        chartCtx.stroke();
+      }
+
+      // Draw Rate Line (Green)
+      chartCtx.strokeStyle = "#22c55e";
+      chartCtx.lineWidth = 2.5;
+      chartCtx.beginPath();
+      for (let i = 0; i < dataLength; i++) {
+        const x = w * (i / 39);
+        const y = h - (h * (messageRateHistory[i] / maxRate) * 0.8) - 5;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+
+      // Draw Lag Line (Orange)
+      chartCtx.strokeStyle = "#f97316";
+      chartCtx.lineWidth = 2.5;
+      chartCtx.beginPath();
+      for (let i = 0; i < dataLength; i++) {
+        const x = w * (i / 39);
+        const y = h - (h * (lagHistory[i] / maxLag) * 0.8) - 5;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+    }
+
+    function changeSpeed(value) {
+      animationSpeed = parseFloat(value);
+      document.getElementById("speed-display").textContent = animationSpeed.toFixed(1) + "x";
+      
+      // Restart active producer loops
+      producers.forEach(p => {
+        stopProducerLoop(p.id);
+        startProducerLoop(p);
+      });
+      
+      // Update connections visually
+      drawBackgroundConnections();
+      
+      logSystem(`Speed multiplier changed to ${animationSpeed.toFixed(1)}x.`, "info");
+    }
+
+    function resetAll() {
+      totalMessagesProcessed = 0;
+      lastProcessedCount = 0;
+      messageRateHistory = [];
+      lagHistory = [];
+      
+      // Reset logs and offsets
+      brokers.forEach(b => {
+        partitionLogs[b.id] = { 0: [], 1: [], 2: [] };
+        partitionOffsets[b.id] = { 0: 0, 1: 0, 2: 0 };
+      });
+      partitionHW = { 0: 0, 1: 0, 2: 0 };
+      
+      consumers.forEach(c => {
+        c.offsets = { 0: 0, 1: 0, 2: 0 };
+      });
+
+      document.getElementById("metrics-processed").textContent = 0;
+      document.getElementById("metrics-throughput").textContent = "0 msg/s";
+      document.getElementById("metrics-lag").textContent = 0;
+      document.getElementById("console-logs-container").innerHTML = "";
+
+      recalculatePartitionLeadership();
+      rebalanceConsumers();
+      buildBrokersUI();
+      buildConsumersUI();
+      drawBackgroundConnections();
+      
+      logSystem("Simulation reset. Logs and partition states cleared.", "warn");
+    }
+  </script>
+</body>
+</html>
